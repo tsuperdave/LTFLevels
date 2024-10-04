@@ -2,10 +2,11 @@
 
 #Globals -----------------------------------
 def na = Double.NaN;
+def bn = BarNumber();
 def o = open;
 def h = high;
 def l = low;
-def price = close;
+def c = close;
 def aggD = AggregationPeriod.DAY;
 def aggW = AggregationPeriod.WEEK;
 def aggM = AggregationPeriod.MONTH;
@@ -17,12 +18,15 @@ def EMA21 = ExpAverage(close, 21);
 def EMA40 = ExpAverage(close, 40);
 def EMA200 = ExpAverage(close, 200);
 def ymd = GetYYYYMMDD();
+def globex = GetTime() < RegularTradingStart(GetYYYYMMDD());
 def isNewDay  = !IsNaN(close) and ymd != ymd[1];
 def dayCount = CompoundValue(1, if isNewDay then dayCount[1] + 1 else dayCount[1], 0);
 def thisDay  = (HighestAll(dayCount) - dayCount) ;
 def start = if thisday == 1 and secondsFromTime(0930)==0 then 1 else start[1];
 def isperiodrolled = thisDay <= 1 and start;
+input locate_bubbles_at_time = 0930;
 
+def timeopen = SecondsFromTime(locate_bubbles_at_time) == 0;
 rec volumeSum;
 rec volumeVwapSum;
 # ------------------------------------------
@@ -63,10 +67,10 @@ if !(isperiodrolled) {
 
 rec v = if IsNaN(reference VWAP()) then v[1] else twoDVwap;
 
-plot vwapDay   = if !showDailyVwap then na else dVwap;
+plot vwapDay   = if showDailyVwap then dVwap else na;
 plot vwap2day = if isperiodrolled && show2DayVWAP then v else na;
-plot vwapWeek  = if !showWeeklyVwap then na else wVwap;
-plot vwapMonth = if !showMonthlyVwap then na else mVwap;
+plot vwapWeek  = if showWeeklyVwap && GetAggregationPeriod() > AggregationPeriod.TWO_MIN then wVwap else na;
+plot vwapMonth = if showMonthlyVwap && GetAggregationPeriod() > AggregationPeriod.TWO_MIN then mVwap else na;
 
 vwapDay.SetDefaultColor(Color.CYAN);
 vwap2day.SetDefaultColor(Color.GRAY);
@@ -110,6 +114,8 @@ plot prevWeekLow;
 plot prevWeekHigh;
 plot prevMonthLow;
 plot prevMonthHigh;
+plot GlobexHigh;
+plot GlobexLow;
 def exp = IsNaN(close[0]);
 
 prevDayLow   = if extend_lines
@@ -137,6 +143,25 @@ prevMonthHigh  = if extend_lines
                else if exp then high("period" = aggM)[1]
                else na;
 
+def ONhigh = if GlobeX and !GlobeX[1] then h else if GlobeX and h > ONhigh[1] then h else ONhigh[1];
+def ONhighBar = if GlobeX and h == ONhigh then bn else na;
+
+def ONlow = if GlobeX and !GlobeX[1] then l else if GlobeX and l < ONlow[1] then l else ONlow[1];
+def ONlowBar = if GlobeX and l == ONlow then bn else na;
+
+def OverNightHigh = if bn == HighestAll(ONhighBar) then ONhigh else OverNightHigh[1];
+def OverNightLow = if bn == HighestAll(ONlowBar) then ONlow else OverNightLow[1];
+
+def PM_H = if isnan(close) then PM_H[1] else if OverNightHigh > 0 then OverNightHigh else na;
+def PM_L = if isnan(close) then PM_L[1] else if OverNightLow > 0 then OverNightLow else na;
+
+if !IsNaN(close(period = aggD)[-1]) {
+    GlobexHigh = na;
+    GlobexLow = na;
+} else {
+    GlobexHigh = if !IsNaN(close) then na else PM_H;
+    GlobexLow  = if !IsNaN(close) then na else PM_L;
+}
 
 def b = bubbleOffset;
 def b1 = b + 1;
@@ -162,34 +187,20 @@ AddChartBubble(showBubbles and IsNaN(close[b]) and !IsNaN(close[b1]),
 prevMonthHigh[b], "M-" + if showValuesInBubbles then "Hi $" + prevMonthHigh else "Hi", Color.DARK_ORANGE, yes);
 #------------------------------
 #--------------------GLOBEX
-def bar = BarNumber();
-def GlobeX = GetTime() < RegularTradingStart(GetYYYYMMDD());
+AddChartBubble(showBubbles and IsNaN(close[b]) and !IsNaN(close[b1]),
+GlobexHigh[b], "G-" + if showValuesInBubbles then "Hi $" + GlobexHigh else "Hi", Color.GRAY, yes);
 
-def ONhigh = if GlobeX and !GlobeX[1] then h else if GlobeX and h > ONhigh[1] then h else ONhigh[1];
-def ONhighBar = if GlobeX and h == ONhigh then bar else Double.NaN;
-def ONlow = if GlobeX and !GlobeX[1] then l else if GlobeX and l < ONlow[1] then l else ONlow[1];
-def ONlowBar = if GlobeX and l == ONlow then bar else Double.NaN;
-def OverNightHigh = if BarNumber() == HighestAll(ONhighBar) then ONhigh else OverNightHigh[1];
-def OverNightLow = if BarNumber() == HighestAll(ONlowBar) then ONlow else OverNightLow[1];
-
-plot globexHi = if OverNightHigh > 0 then OverNightHigh else Double.NaN;
-plot globexLo = if OverNightLow > 0 then OverNightLow else Double.NaN;
-
-globexHi.SetHiding(!PlotGlobexHiLo);
-globexHi.SetPaintingStrategy(PaintingStrategy.LINE);
-globexHi.SetDefaultColor(Color.GRAY);
-globexHi.SetStyle(Curve.FIRM);
-globexHi.SetLineWeight(1);
-globexHi.HideBubble();
-globexHi.HideTitle();
-
-globexLo.SetHiding(!PlotGlobexHiLo);
-globexLo.SetPaintingStrategy(PaintingStrategy.LINE);
-globexLo.SetDefaultColor(Color.GRAY);
-globexLo.SetStyle(Curve.FIRM);
-globexLo.SetLineWeight(1);
-globexLo.HideBubble();
-globexLo.HideTitle();
+AddChartBubble(showBubbles and IsNaN(close[b]) and !IsNaN(close[b1]),
+GlobexLow[b], "G-" + if showValuesInBubbles then "Lo $" + GlobexLow else "Lo", Color.GRAY, yes);
+#------------------------------
+GlobexHigh.SetDefaultColor(Color.GRAY);
+GlobexLow.SetDefaultColor(Color.GRAY);
+GlobexHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+GlobexLow.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+GlobexHigh.HideBubble();
+GlobexHigh.HideTitle();
+GlobexLow.HideBubble();
+GlobexLow.HideTitle();
 
 prevDayLow.SetDefaultColor(Color.CYAN);
 prevDayHigh.SetDefaultColor(Color.CYAN);
@@ -212,4 +223,9 @@ prevMonthHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
 prevMonthLow.HideTitle();
 prevMonthHigh.HideTitle();
 #---------------------------------------------
+
+
+
+
+
 
