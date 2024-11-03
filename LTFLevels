@@ -65,12 +65,21 @@ if !(isperiodrolled) {
     volumeVwapSum = CompoundValue(1, volumeVwapSum[1] + volume * vwap, volume * vwap);
 }
 
+<<<<<<< HEAD
 rec v = if IsNaN(reference VWAP("time frame" = "DAY")) then v[1] else twoDVwap;
 
 plot vwapDay   = if showDailyVwap then dVwap else na;
 plot vwap2day = if isperiodrolled && show2DayVWAP then v else na;
 plot vwapWeek  = if showWeeklyVwap then wVwap else na;
 plot vwapMonth = if showMonthlyVwap then mVwap else na;
+=======
+rec v = if IsNaN(reference VWAP()) then v[1] else twoDVwap;
+
+plot vwapDay   = if showDailyVwap then dVwap else na;
+plot vwap2day = if isperiodrolled && show2DayVWAP then v else na;
+plot vwapWeek  = if showWeeklyVwap && GetAggregationPeriod() > AggregationPeriod.TWO_MIN then wVwap else na;
+plot vwapMonth = if showMonthlyVwap && GetAggregationPeriod() > AggregationPeriod.TWO_MIN then mVwap else na;
+>>>>>>> 00c4fe111ca5656f5c1db0beb1205564a38288bb
 
 vwapDay.SetDefaultColor(Color.CYAN);
 vwap2day.SetDefaultColor(Color.GRAY);
@@ -78,7 +87,11 @@ vwap2day.SetLineWeight(2);
 vwapWeek.SetDefaultColor(Color.YELLOW);
 vwapMonth.SetDefaultColor(Color.DARK_ORANGE);
 vwapDay.SetPaintingStrategy(PaintingStrategy.LINE);
+<<<<<<< HEAD
 vwap2day.SetPaintingStrategy(PaintingStrategy.LINE);
+=======
+vwap2day.SetPaintingStrategy(PaintingStrategy.LINE);    
+>>>>>>> 00c4fe111ca5656f5c1db0beb1205564a38288bb
 vwapWeek.SetPaintingStrategy(PaintingStrategy.LINE);
 vwapMonth.SetPaintingStrategy(PaintingStrategy.LINE);
 vwapDay.SetStyle(Curve.SHORT_DASH);
@@ -223,3 +236,12 @@ prevMonthHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
 prevMonthLow.HideTitle();
 prevMonthHigh.HideTitle();
 #---------------------------------------------
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+>>>>>>> 00c4fe111ca5656f5c1db0beb1205564a38288bb
